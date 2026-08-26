@@ -26,3 +26,6 @@ replay_pid*
 .env
 target/
 .idea/
+
+gitleaks-report.json
+gitleaks-working-tree-report.json
