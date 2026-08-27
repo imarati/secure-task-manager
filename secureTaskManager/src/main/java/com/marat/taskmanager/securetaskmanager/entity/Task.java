@@ -17,7 +17,7 @@ import java.time.Instant;
 public class Task {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @Column(nullable = false, length = 30)
