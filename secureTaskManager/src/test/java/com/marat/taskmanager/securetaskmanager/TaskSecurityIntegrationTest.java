@@ -23,6 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.test.context.ActiveProfiles;
@@ -164,6 +165,75 @@ class TaskSecurityIntegrationTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.validationErrors.title")
                         .value("Title must not be blank"));
+    }
+
+    @Test
+    void login_withWrongPassword_shouldReturnUnauthorized() throws Exception {
+        register("user-a@example.com", "password123", "User A");
+
+        LoginRequest request = new LoginRequest();
+        request.setEmail("user-a@example.com");
+        request.setPassword("wrong-password");
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void register_withExistingEmail_shouldReturnConflict() throws Exception {
+        register("user-a@example.com", "password123", "User A");
+
+        RegisterRequest duplicateRequest = registerRequest(
+                "user-a@example.com",
+                "another-password",
+                "User A duplicate"
+        );
+
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(duplicateRequest)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void owner_canUpdateOwnTask() throws Exception {
+        String tokenA = register("user-a@example.com", "password123", "User A");
+        Long taskId = createTask(tokenA, "Original title");
+
+        String updateJson = """
+            {
+              "title": "Updated title",
+              "description": "Updated description",
+              "status": "IN_PROGRESS",
+              "priority": "HIGH"
+            }
+            """;
+
+        mockMvc.perform(put("/api/tasks/" + taskId)
+                        .header("Authorization", "Bearer " + tokenA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(taskId))
+                .andExpect(jsonPath("$.title").value("Updated title"))
+                .andExpect(jsonPath("$.status").value("IN_PROGRESS"))
+                .andExpect(jsonPath("$.priority").value("HIGH"));
+    }
+
+    @Test
+    void owner_canDeleteOwnTask() throws Exception {
+        String tokenA = register("user-a@example.com", "password123", "User A");
+        Long taskId = createTask(tokenA, "Task to delete");
+
+        mockMvc.perform(delete("/api/tasks/" + taskId)
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/tasks/" + taskId)
+                        .header("Authorization", "Bearer " + tokenA))
+                .andExpect(status().isNotFound());
     }
 
     private RegisterRequest registerRequest(

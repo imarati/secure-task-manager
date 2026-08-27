@@ -3,6 +3,7 @@ package com.marat.taskmanager.securetaskmanager.service;
 import com.marat.taskmanager.securetaskmanager.dto.auth.*;
 import com.marat.taskmanager.securetaskmanager.entity.enums.Role;
 import com.marat.taskmanager.securetaskmanager.entity.User;
+import com.marat.taskmanager.securetaskmanager.exception.EmailAlreadyExistsException;
 import com.marat.taskmanager.securetaskmanager.repository.UserRepository;
 import com.marat.taskmanager.securetaskmanager.security.JwtService;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,7 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new EmailAlreadyExistsException(request.getEmail());
         }
 
         User user = User.builder()
