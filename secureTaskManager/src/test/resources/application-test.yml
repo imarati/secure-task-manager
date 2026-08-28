@@ -1,10 +1,14 @@
 spring:
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        max-page-size: 100
   datasource:
     url: jdbc:postgresql://localhost:5432/secure_task_manager_test
     username: myuser
     password: mysecretpassword
     driver-class-name: org.postgresql.Driver
-
   jpa:
     hibernate:
       ddl-auto: validate

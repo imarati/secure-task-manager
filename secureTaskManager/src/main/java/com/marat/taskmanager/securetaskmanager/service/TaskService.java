@@ -6,11 +6,14 @@ import com.marat.taskmanager.securetaskmanager.dto.task.UpdateTaskRequest;
 import com.marat.taskmanager.securetaskmanager.entity.enums.Role;
 import com.marat.taskmanager.securetaskmanager.entity.Task;
 import com.marat.taskmanager.securetaskmanager.entity.User;
+import com.marat.taskmanager.securetaskmanager.entity.enums.TaskPriority;
 import com.marat.taskmanager.securetaskmanager.entity.enums.TaskStatus;
 import com.marat.taskmanager.securetaskmanager.exception.NotFoundException;
 import com.marat.taskmanager.securetaskmanager.repository.TaskRepository;
 import com.marat.taskmanager.securetaskmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -41,13 +44,40 @@ public class TaskService {
         return toResponse(taskRepository.save(task));
     }
 
-    public List<TaskResponse> getMyTasks(Authentication authentication) {
+    public Page<TaskResponse> getMyTasks(
+            TaskStatus status,
+            TaskPriority priority,
+            Pageable pageable,
+            Authentication authentication
+    ) {
         User currentUser = getCurrentUser(authentication);
 
-        return taskRepository.findAllByOwnerIdOrderByCreatedAtDesc(currentUser.getId())
-                .stream()
-                .map(this::toResponse)
-                .toList();
+        Page<Task> tasks;
+
+        if (status != null && priority != null) {
+            tasks = taskRepository.findByOwnerAndStatusAndPriority(
+                    currentUser,
+                    status,
+                    priority,
+                    pageable
+            );
+        } else if (status != null) {
+            tasks = taskRepository.findByOwnerAndStatus(
+                    currentUser,
+                    status,
+                    pageable
+            );
+        } else if (priority != null) {
+            tasks = taskRepository.findByOwnerAndPriority(
+                    currentUser,
+                    priority,
+                    pageable
+            );
+        } else {
+            tasks = taskRepository.findByOwner(currentUser, pageable);
+        }
+
+        return tasks.map(this::toResponse);
     }
 
     public TaskResponse getById(Long taskId, Authentication authentication) {

@@ -47,6 +47,23 @@ public class CommentService {
         return toResponse(commentRepository.save(comment));
     }
 
+    @Transactional
+    public void delete(
+            Long taskId,
+            Long commentId,
+            Authentication authentication
+    ) {
+        User currentUser = getCurrentUser(authentication);
+
+        Task task = getTaskOrThrow(taskId);
+        Comment comment = getCommentOrThrow(commentId);
+
+        checkCommentAccess(comment, currentUser);
+        checkCommentTaskApply(comment, task);
+
+        commentRepository.delete(comment);
+    }
+
     public List<CommentResponse> getAllByTaskId(
             Long taskId,
             Authentication authentication
@@ -67,6 +84,11 @@ public class CommentService {
                 .orElseThrow(() -> new NotFoundException("Task not found: " + taskId));
     }
 
+    private Comment getCommentOrThrow(Long commentId) {
+        return commentRepository.findById(commentId)
+                .orElseThrow(() -> new NotFoundException("Comment not found: " + commentId));
+    }
+
     private User getCurrentUser(Authentication authentication) {
         return userRepository.findByEmail(authentication.getName())
                 .orElseThrow(() -> new NotFoundException("Current user not found"));
@@ -78,6 +100,21 @@ public class CommentService {
 
         if (!isOwner && !isAdmin) {
             throw new AccessDeniedException("You do not have access to this task");
+        }
+    }
+
+    private void checkCommentAccess(Comment comment, User currentUser) {
+        boolean isOwner = comment.getAuthor().getId() == currentUser.getId();
+        boolean isAdmin = currentUser.getRole() == Role.ROLE_ADMIN;
+
+        if (!isOwner && !isAdmin) {
+            throw new AccessDeniedException("You do not have access to this comment");
+        }
+    }
+
+    private void checkCommentTaskApply(Comment comment, Task task) {
+        if (!comment.getTask().getId().equals(task.getId())) {
+            throw new NotFoundException("Comment not found in this task");
         }
     }
 

@@ -3,10 +3,16 @@ package com.marat.taskmanager.securetaskmanager.controller;
 import com.marat.taskmanager.securetaskmanager.dto.task.CreateTaskRequest;
 import com.marat.taskmanager.securetaskmanager.dto.task.TaskResponse;
 import com.marat.taskmanager.securetaskmanager.dto.task.UpdateTaskRequest;
+import com.marat.taskmanager.securetaskmanager.entity.enums.TaskPriority;
+import com.marat.taskmanager.securetaskmanager.entity.enums.TaskStatus;
 import com.marat.taskmanager.securetaskmanager.service.TaskService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -32,10 +38,25 @@ public class TaskController {
     }
 
     @GetMapping
-    public ResponseEntity<List<TaskResponse>> getMyTasks(
+    public ResponseEntity<Page<TaskResponse>> getMyTasks(
+            @RequestParam(required = false) TaskStatus status,
+            @RequestParam(required = false) TaskPriority priority,
+            @PageableDefault(
+                    page = 0,
+                    size = 10,
+                    sort = "createdAt",
+                    direction = Sort.Direction.DESC
+            ) Pageable pageable,
             Authentication authentication
     ) {
-        return ResponseEntity.ok(taskService.getMyTasks(authentication));
+        return ResponseEntity.ok(
+                taskService.getMyTasks(
+                        status,
+                        priority,
+                        pageable,
+                        authentication
+                )
+        );
     }
 
     @GetMapping("/{taskId}")

@@ -1,4 +1,9 @@
 spring:
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        max-page-size: 100
   datasource:
     url: jdbc:postgresql://localhost:5432/mydatabase
     username: myuser
@@ -7,6 +12,11 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
 
 security:
   jwt:

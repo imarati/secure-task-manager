@@ -41,4 +41,15 @@ public class CommentController {
                 commentService.getAllByTaskId(taskId, authentication)
         );
     }
+
+    @DeleteMapping("/{commentId}")
+    public ResponseEntity<Void> delete(
+            @PathVariable Long taskId,
+            @PathVariable Long commentId,
+            Authentication authentication
+    ) {
+        commentService.delete(taskId, commentId, authentication);
+
+        return ResponseEntity.noContent().build();
+    }
 }
