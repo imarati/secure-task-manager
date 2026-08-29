@@ -19,6 +19,17 @@ spring:
     password: ${RABBITMQ_PASSWORD}
 
 security:
+  security:
+    rate-limit:
+      enabled: true
+      login:
+        capacity: 5
+        refill-tokens: 5
+        refill-minutes: 1
+      register:
+        capacity: 3
+        refill-tokens: 3
+        refill-minutes: 1
   jwt:
-    secret: eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBhZG1pbi5jb20iLCJpYXQiOjE3ODY2MzMwNTIsImV4cCI6MTc4NjcxOTQ1Mn0.Kmuq0oqNVbY1f3PILtEC4SNvVoJDk6Xm5pQfQlaJ0_LGHU7LeuhLrTV0tcGXxRHk
+    secret: uEL6EtXq372fr5OhANdtLMJqnIcsUuaYYSVQLZOMWXdEQYyhs45WlC23vqkaov7xl+EiIgG1Y59RRvoKuNIwNA==
     expiration-ms: 86400000
