@@ -1,0 +1,24 @@
+spring:
+  data:
+    web:
+      pageable:
+        default-page-size: 10
+        max-page-size: 100
+  datasource:
+    url: jdbc:postgresql://localhost:5432/mydatabase
+    username: myuser
+    password: mysecretpassword
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER}
+    password: ${RABBITMQ_PASSWORD}
+
+security:
+  jwt:
+    secret: eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBhZG1pbi5jb20iLCJpYXQiOjE3ODY2MzMwNTIsImV4cCI6MTc4NjcxOTQ1Mn0.Kmuq0oqNVbY1f3PILtEC4SNvVoJDk6Xm5pQfQlaJ0_LGHU7LeuhLrTV0tcGXxRHk
+    expiration-ms: 86400000

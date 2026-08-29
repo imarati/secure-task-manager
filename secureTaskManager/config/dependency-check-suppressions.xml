@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+
+    <!--
+      CVE-2025-7962 applies to Jakarta Mail / Angus Mail SMTP.
+      This project includes org.eclipse.angus:angus-activation, which provides
+      Jakarta Activation registries only and does not include SMTP/Mail code.
+
+      Dependency-Check maps angus-activation to angus_mail with LOW confidence.
+      Reviewed on 2026-08-26.
+    -->
+    <suppress>
+        <notes><![CDATA[
+            False positive:
+            CVE-2025-7962 affects Jakarta Mail / Angus Mail SMTP injection.
+            The scanned dependency is org.eclipse.angus:angus-activation:2.0.3,
+            not org.eclipse.angus:smtp or Angus Mail.
+            The application does not send email or use SMTP.
+        ]]></notes>
+
+        <packageUrl regex="true">
+            ^pkg:maven/org\.eclipse\.angus/angus-activation@2\.0\.3$
+        </packageUrl>
+
+        <cve>CVE-2025-7962</cve>
+    </suppress>
+
+</suppressions>
