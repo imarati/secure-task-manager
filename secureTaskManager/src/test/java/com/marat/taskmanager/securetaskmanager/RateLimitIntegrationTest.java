@@ -64,6 +64,8 @@ class RateLimitIntegrationTest {
                 ))
                 .andExpect(jsonPath("$.status").value(429))
                 .andExpect(jsonPath("$.error").value("Too Many Requests"))
+                .andExpect(jsonPath("$.message")
+                        .value("Too many requests. Please try again later."))
                 .andExpect(jsonPath("$.path").value("/api/auth/login"))
                 .andExpect(jsonPath("$.trace").doesNotExist())
                 .andExpect(jsonPath("$.exception").doesNotExist());

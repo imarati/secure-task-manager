@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.server.ResponseStatusException;
 
 @Slf4j
 @RestControllerAdvice
@@ -155,6 +156,19 @@ public class GlobalExceptionHandler {
         return buildError(
                 HttpStatus.METHOD_NOT_ALLOWED,
                 "Request method is not supported for this endpoint",
+                request.getRequestURI(),
+                null
+        );
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiError> handleResponseStatusException(
+            ResponseStatusException exception,
+            HttpServletRequest request
+    ) {
+        return buildError(
+                HttpStatus.valueOf(exception.getStatusCode().value()),
+                exception.getReason(),
                 request.getRequestURI(),
                 null
         );

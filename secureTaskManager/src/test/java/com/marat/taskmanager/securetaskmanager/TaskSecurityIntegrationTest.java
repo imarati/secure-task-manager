@@ -193,16 +193,35 @@ class TaskSecurityIntegrationTest {
                     "User A"
             );
 
-            char lastCharacter = validToken.charAt(validToken.length() - 1);
+            String[] tokenParts = validToken.split("\\.");
 
-            String tamperedToken = validToken.substring(
-                    0,
-                    validToken.length() - 1
-            ) + (lastCharacter == 'a' ? 'b' : 'a');
+            assertThat(tokenParts).hasSize(3);
+
+            String signature = tokenParts[2];
+
+            int indexToChange = signature.length() / 2;
+
+            char originalCharacter = signature.charAt(indexToChange);
+            char replacementCharacter =
+                    originalCharacter == 'a' ? 'b' : 'a';
+
+            String tamperedSignature = signature.substring(0, indexToChange)
+                    + replacementCharacter
+                    + signature.substring(indexToChange + 1);
+
+            String tamperedToken = tokenParts[0]
+                    + "."
+                    + tokenParts[1]
+                    + "."
+                    + tamperedSignature;
 
             mockMvc.perform(get("/api/tasks/1")
                             .header("Authorization", "Bearer " + tamperedToken))
-                    .andExpect(status().isUnauthorized());
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.status").value(401))
+                    .andExpect(jsonPath("$.error").value("Unauthorized"))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.exception").doesNotExist());
         }
 
         @Test
@@ -793,6 +812,88 @@ class TaskSecurityIntegrationTest {
                             .value("Second task"))
                     .andExpect(jsonPath("$.content[2].title")
                             .value("First task"));
+        }
+
+        @Test
+        void getTasks_withNegativePage_shouldReturnBadRequest() throws Exception {
+            String tokenA = register("user-a@example.com", "password123", "User A");
+
+            mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + tokenA)
+                            .param("page", "-1"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.exception").doesNotExist());
+        }
+
+        @Test
+        void getTasks_withOversizedPageSize_shouldReturnBadRequest()
+                throws Exception {
+
+            String tokenA = register("user-a@example.com", "password123", "User A");
+
+            mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + tokenA)
+                            .param("page", "0")
+                            .param("size", "1000000"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message")
+                            .value("Page size must be between 1 and 100"))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.exception").doesNotExist());
+        }
+
+        @Test
+        void getTasks_withForbiddenSortField_shouldReturnBadRequest()
+                throws Exception {
+
+            String tokenA = register("user-a@example.com", "password123", "User A");
+
+            mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + tokenA)
+                            .param("sort", "owner.passwordHash,asc"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message")
+                            .value("Sorting by this field is not allowed"))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.exception").doesNotExist());
+        }
+
+        @Test
+        void getTasks_withInvalidSortDirection_shouldReturnBadRequest()
+                throws Exception {
+
+            String tokenA = register("user-a@example.com", "password123", "User A");
+
+            mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + tokenA)
+                            .param("sort", "title,sideways"))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.message")
+                            .value("Sort direction must be asc or desc"))
+                    .andExpect(jsonPath("$.trace").doesNotExist())
+                    .andExpect(jsonPath("$.exception").doesNotExist());
+        }
+
+        @Test
+        void getTasks_withAllowedSortField_shouldReturnSortedTasks()
+                throws Exception {
+
+            String tokenA = register("user-a@example.com", "password123", "User A");
+
+            createTask(tokenA, "Bravo");
+            createTask(tokenA, "Alpha");
+
+            mockMvc.perform(get("/api/tasks")
+                            .header("Authorization", "Bearer " + tokenA)
+                            .param("sort", "title,asc"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content[0].title").value("Alpha"))
+                    .andExpect(jsonPath("$.content[1].title").value("Bravo"));
         }
     }
 

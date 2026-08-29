@@ -4,10 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.marat.taskmanager.securetaskmanager.exception.ApiError;
 import com.marat.taskmanager.securetaskmanager.security.JwtAuthenticationFilter;
 import com.marat.taskmanager.securetaskmanager.security.RateLimitFilter;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -21,24 +20,20 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import java.io.IOException;
-import java.time.Instant;
-
 @Configuration
 @EnableMethodSecurity
-@EnableConfigurationProperties(RateLimitProperties.class)
 @RequiredArgsConstructor
 public class SecurityConfig {
 
     private final ObjectMapper objectMapper;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
-    private final RateLimitFilter rateLimitFilter;
+    private final ObjectProvider<RateLimitFilter> rateLimitFilterProvider;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http)
             throws Exception {
 
-        return http
+        http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session
                         .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
@@ -53,23 +48,75 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exceptionHandling -> exceptionHandling
-                        .authenticationEntryPoint(this::writeUnauthorizedResponse)
-                        .accessDeniedHandler(this::writeForbiddenResponse)
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            ApiError error = ApiError.builder()
+                                    .timestamp(java.time.Instant.now())
+                                    .status(HttpServletResponse.SC_UNAUTHORIZED)
+                                    .error("Unauthorized")
+                                    .message("Authentication is required")
+                                    .path(request.getRequestURI())
+                                    .build();
+
+                            response.setStatus(
+                                    HttpServletResponse.SC_UNAUTHORIZED
+                            );
+                            response.setContentType(
+                                    MediaType.APPLICATION_JSON_VALUE
+                            );
+                            response.setCharacterEncoding("UTF-8");
+
+                            objectMapper.writeValue(
+                                    response.getOutputStream(),
+                                    error
+                            );
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            ApiError error = ApiError.builder()
+                                    .timestamp(java.time.Instant.now())
+                                    .status(HttpServletResponse.SC_FORBIDDEN)
+                                    .error("Forbidden")
+                                    .message(
+                                            "You do not have permission "
+                                                    + "to perform this action"
+                                    )
+                                    .path(request.getRequestURI())
+                                    .build();
+
+                            response.setStatus(
+                                    HttpServletResponse.SC_FORBIDDEN
+                            );
+                            response.setContentType(
+                                    MediaType.APPLICATION_JSON_VALUE
+                            );
+                            response.setCharacterEncoding("UTF-8");
+
+                            objectMapper.writeValue(
+                                    response.getOutputStream(),
+                                    error
+                            );
+                        })
                 )
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
-                )
-                .addFilterBefore(
-                        rateLimitFilter,
-                        UsernamePasswordAuthenticationFilter.class
-                )
-                .build();
+                );
+
+        RateLimitFilter rateLimitFilter =
+                rateLimitFilterProvider.getIfAvailable();
+
+        if (rateLimitFilter != null) {
+            http.addFilterBefore(
+                    rateLimitFilter,
+                    UsernamePasswordAuthenticationFilter.class
+            );
+        }
+
+        return http.build();
     }
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(10);
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
@@ -77,62 +124,5 @@ public class SecurityConfig {
             AuthenticationConfiguration configuration
     ) throws Exception {
         return configuration.getAuthenticationManager();
-    }
-
-    private void writeUnauthorizedResponse(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            org.springframework.security.core.AuthenticationException exception
-    ) throws IOException {
-        writeErrorResponse(
-                request,
-                response,
-                HttpServletResponse.SC_UNAUTHORIZED,
-                "Unauthorized",
-                "Authentication is required"
-        );
-    }
-
-    private void writeForbiddenResponse(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            org.springframework.security.access.AccessDeniedException exception
-    ) throws IOException {
-        writeErrorResponse(
-                request,
-                response,
-                HttpServletResponse.SC_FORBIDDEN,
-                "Forbidden",
-                "You do not have permission to perform this action"
-        );
-    }
-
-    private void writeErrorResponse(
-            HttpServletRequest request,
-            HttpServletResponse response,
-            int status,
-            String error,
-            String message
-    ) throws IOException {
-        ApiError apiError = ApiError.builder()
-                .timestamp(Instant.now())
-                .status(status)
-                .error(error)
-                .message(message)
-                .path(request.getRequestURI())
-                .build();
-
-        response.setStatus(status);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-
-        response.setHeader(
-                "Cache-Control",
-                "no-store, no-cache, max-age=0, must-revalidate"
-        );
-        response.setHeader("Pragma", "no-cache");
-        response.setDateHeader("Expires", 0);
-
-        objectMapper.writeValue(response.getOutputStream(), apiError);
     }
 }
