@@ -17,3 +17,10 @@ spring:
 
   flyway:
     enabled: true
+
+security:
+  rate-limit:
+    enabled: false
+  jwt:
+    secret: fopy71t5bib/o/RQFzyrUgEBV5EycpaJ8m4kh4k9TTnyAIn4OWgl+LdvrnYWPT3IDxCZIfsrCMppxhYJbfmCDg==
+    expiration-ms: 315360000000

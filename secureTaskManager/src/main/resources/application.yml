@@ -12,13 +12,19 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: true
-  rabbitmq:
-    host: ${RABBITMQ_HOST:rabbitmq}
-    port: ${RABBITMQ_PORT:5672}
-    username: ${RABBITMQ_USER}
-    password: ${RABBITMQ_PASSWORD}
 
 security:
+  security:
+    rate-limit:
+      enabled: true
+      login:
+        capacity: 5
+        refill-tokens: 5
+        refill-minutes: 1
+      register:
+        capacity: 3
+        refill-tokens: 3
+        refill-minutes: 1
   jwt:
-    secret: eyJhbGciOiJIUzM4NCJ9.eyJzdWIiOiJhZG1pbkBhZG1pbi5jb20iLCJpYXQiOjE3ODY2MzMwNTIsImV4cCI6MTc4NjcxOTQ1Mn0.Kmuq0oqNVbY1f3PILtEC4SNvVoJDk6Xm5pQfQlaJ0_LGHU7LeuhLrTV0tcGXxRHk
+    secret: ${JWT_SECRET}
     expiration-ms: 86400000
